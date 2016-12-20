@@ -90,6 +90,17 @@ function Get-WimInteropObject {
 }
 
 function Get-WimFileImagesInfo {
+    <#
+    .SYNOPSIS
+    This function retrieves a list of the Windows Editions from an ISO file.
+    .DESCRIPTION
+    This method reads the Images content of the WIM file that can be found
+    on a mounted ISO and it returns an object for each Windows Edition, each
+    object containing a list of properties.
+    .PARAMETER
+    It takes as parameter the location of the install.wim file found on
+    the mounted ISO image, in the Sources directory.
+    #>
     [CmdletBinding()]
     Param(
         [parameter(Mandatory=$true)]
@@ -537,6 +548,21 @@ function Add-VirtIODrivers {
 }
 
 function Add-VirtIODriversFromISO {
+    <#
+    .SYNOPSIS
+    The VirtIO ISO contains all the synthetic drivers for the KVM hypervisor. 
+    This function allows you to add VirtIO drivers to your Windows image, from an ISO file.
+    .DESCRIPTION
+    This function takes the VirtIO drivers from a specified ISO file and installs them into the 
+    given VHD, based on the characteristics given by the image parameter (which contains the
+    image version, image architecture and installation type).
+    .PARAMETER
+    The first parameter needed is the driver letter of the mounted Windows image.
+    The second parameter is the exact flavor of Windows installed on that image,
+    so that the appropriate VirtIO drivers can be installed.
+    The last parameter is the path to the VirtIO drivers ISO file, where the drivers
+    can be found.
+    #>
     Param(
         [parameter(Mandatory=$true)]
         [string]$vhdDriveLetter,
@@ -644,6 +670,19 @@ function Compress-Image {
 }
 
 function Resize-VHDImage {
+    <#
+    .SYNOPSIS
+    This function resizes the VHD image in order to keep the storage
+    requirements to a minimum.
+    .DESCRIPTION
+    First, this function mounts the VHD given as parameter. It gets
+    the drive letter for that mounted drive and then computes the 
+    actual size and the minimum supported size.
+    .PARAMETER
+    It takes two parameters: the first one is the path to the VHD
+    image and the second one is the amount of free space needed on
+    the VHD after the resizing is done.
+    #>
     Param(
         [Parameter(Mandatory=$true)]
         [string]$VirtualDiskPath,
@@ -792,6 +831,34 @@ function Run-Sysprep {
 }
 
 function New-MaaSImage {
+    <#
+    .SYNOPSIS
+    This function generates a MaaS ready image from an ISO file.
+    .DESCRIPTION
+    It calls New-WindowsOnlineImage with the Type parameter set to MAAS.
+    .PARAMETER
+    The first parameter is the location of the WIM file from the Windows ISO.
+    The ImageName parameter is the object which contains all the information about
+    the Windows flavor selected. VirtualDiskPath is the destination location of the
+    generated image and SizeBytes represents the size of that image before Resize.
+    ProductKey represents the key for the OS selected, the VirtualDiskFormat is the
+    format of the resulting image. The DiskLayout can be set to either BIOS or UEFI.
+    VirtIO drviers can be added if a path to an ISO is specified, ExtraDrivers and
+    ExtraFeatures also. The InstallUpdates switch,if set to true, will install the
+    latest updates from Microsoft. The AdministratorPassword parameter is used by
+    the script to connect to the instance while it is generating. The PersistDriverInstall
+    switch is used in case the hardware on which the image is generated will also be the
+    hardware on which the image will be deployed. Memory and CpuCores indicate the resources
+    that the virtual machine used to generate the image will have. RunSysprep switch
+    is used to clean the OS on the VM, and to prepare it for a first time use. If set to
+    true, the InstallMaaSHooks will install the MaaS Hooks on the image. SwitchName is used
+    to specify the virtual switch the VM will be using to connect to the internet. If none
+    is specified, one will be created. Parameter Force is used to force the execution of
+    a command. The Type parameter allows to choose between MaaS, KVM and Hyper-V specific
+    images. PurgeUpdates, if set to true, will run DISM with /resetbase option; this will
+    reduce the size of WinSXS folder, but after that Windows updates will not be possible to
+    uninstall. DisableSwap will disable Windows Paging File if set to true.
+    #>
     [CmdletBinding()]
     param
     (
@@ -848,6 +915,38 @@ function New-MaaSImage {
 }
 
 function New-WindowsOnlineImage {
+    <#
+    .SYNOPSIS
+    This function generates a Windows image using Hyper-V as hypervisor.
+    .DESCRIPTION
+    This command requires Hyper-V to be enabled, a VMSwitch to be configured for external
+    network connectivity if the updates are to be installed, which is highly recommended.
+    This command uses internally the New-WindowsCloudImage to generate the base image and
+    start a Hyper-V instance using the base image. After the Hyper-V instance shuts down, 
+    the resulting VHDX is shrinked to a minimum size and converted to the required format.
+    .PARAMETER
+    The first parameter is the location of the WIM file from the Windows ISO.
+    The ImageName parameter is the object which contains all the information about
+    the Windows flavor selected. VirtualDiskPath is the destination location of the
+    generated image and SizeBytes represents the size of that image before Resize.
+    ProductKey represents the key for the OS selected, the VirtualDiskFormat is the
+    format of the resulting image. The DiskLayout can be set to either BIOS or UEFI.
+    VirtIO drviers can be added if a path to an ISO is specified, ExtraDrivers and
+    ExtraFeatures also. The InstallUpdates switch,if set to true, will install the
+    latest updates from Microsoft. The AdministratorPassword parameter is used by
+    the script to connect to the instance while it is generating. The PersistDriverInstall
+    switch is used in case the hardware on which the image is generated will also be the
+    hardware on which the image will be deployed. Memory and CpuCores indicate the resources
+    that the virtual machine used to generate the image will have. RunSysprep switch
+    is used to clean the OS on the VM, and to prepare it for a first time use. If set to
+    true, the InstallMaaSHooks will install the MaaS Hooks on the image. SwitchName is used
+    to specify the virtual switch the VM will be using to connect to the internet. If none
+    is specified, one will be created. Parameter Force is used to force the execution of
+    a command. The Type parameter allows to choose between MaaS, KVM and Hyper-V specific
+    images. PurgeUpdates, if set to true, will run DISM with /resetbase option; this will
+    reduce the size of WinSXS folder, but after that Windows updates will not be possible to
+    uninstall. DisableSwap will disable Windows Paging File if set to true.
+    #>
     [CmdletBinding()]
     param
     (
@@ -984,6 +1083,36 @@ function New-WindowsOnlineImage {
 }
 
 function New-WindowsCloudImage {
+    <#
+    .SYNOPSIS
+    This function creates a functional Windows Image, starting from an ISO file,
+    without the need of Hyper-V to be enabled.
+    .DESCRIPTION
+    This script can generate a Windows Image in one of the following formats: VHD,
+    VHDX, QCow2, VMDK or RAW. It takes the Windows flavor indicated by the ImageName
+    from the WIM file and based on the parameters given, it will generate an image.
+    This function does not require Hyper-V to be enabled, but the generated image
+    is not ready to be deployed, as it needs to be started manually on another hypervisor.
+    The image is ready to be used when it shuts down.
+    .PARAMETER
+    The first parameter is the location of the WIM file from the Windows ISO.
+    The ImageName parameter is the object which contains all the information about
+    the Windows flavor selected. VirtualDiskPath is the destination location of the
+    generated image and SizeBytes represents the size of that image before Resize.
+    ProductKey represents the key for the OS selected, the VirtualDiskFormat is the
+    format of the resulting image. The DiskLayout can be set to either BIOS or UEFI.
+    VirtIO drviers can be added if a path to an ISO is specified, ExtraDrivers and
+    ExtraFeatures also. The InstallUpdates switch,if set to true, will install the
+    latest updates from Microsoft. The AdministratorPassword parameter is used by
+    the script to connect to the instance while it is generating. UnattendXmlPath
+    is the path to the XML template file. The PersistDriverInstall switch is used
+    in case the hardware on which the image is generated will also be the hardware
+    on which the image will be deployed. If set to true, the InstallMaaSHooks will
+    install the MaaS Hooks on the image. PurgeUpdates, if set to true, will run
+    DISM with /resetbase option; this will reduce the size of WinSXS folder, but
+    after that Windows updates will not be possible to uninstall. DisableSwap will
+    disable Windows Paging File if set to true.
+    #>
     [CmdletBinding()]
     Param(
         [parameter(Mandatory=$true, ValueFromPipeline=$true)]
